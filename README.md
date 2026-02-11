@@ -1,6 +1,6 @@
 # Simple React Template
 
-A minimal React + Vite + TypeScript template for Venus-enabled apps. This is a stripped-down version of `_template_react` that keeps the essential SDK patterns while removing complex UI scaffolding.
+A minimal React + Vite + TypeScript template for RUN.game apps. It includes the essential SDK patterns while keeping the UI scaffolding simple.
 
 ## What's Included
 
@@ -37,4 +37,4 @@ src/
 2. **Change theme** — Edit `src/theme/default.ts` to update colors, spacing, etc.
 3. **Add components** — Create new components in `src/components/`
 
-For the full-featured template with overlays, auto-hide scroll, and TopBar, see `_template_react`.
+For the full-featured template with overlays, auto-hide scroll, and TopBar, see `run-template-2d-react`.

@@ -20,7 +20,7 @@ const imageBlob = RundotGameAPI.cdn.fetchAssets('hero-image.png');
 <img src={imageBlob} alt="Hero" />
 ```
 
-**Note:** Replace `_template_react_simple` with your actual folder name from `H5/{folder-name}/`.
+**Note:** Assets are uploaded to the CDN automatically when you deploy with `rundot deploy`.
 
 ## Important Notes
 

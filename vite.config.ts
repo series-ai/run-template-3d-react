@@ -3,7 +3,6 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { rundotGameLibrariesPlugin } from '@series-inc/rundot-game-sdk/vite';
 
-// App name is auto-detected from folder name (H5/{folder-name}/)
 // CDN assets in cdn/ folder are automatically served in dev mode
 
 export default defineConfig({

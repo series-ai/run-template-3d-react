@@ -42,7 +42,7 @@ export const HomeTab: React.FC = () => {
     <>
       <Card title="Welcome">
         <p>
-          This is a simple React template for Venus-enabled projects. It includes theming, tab
+          This is a simple React template for RUN.game projects. It includes theming, tab
           navigation, appStorage, and ad integration out of the box.
         </p>
       </Card>
