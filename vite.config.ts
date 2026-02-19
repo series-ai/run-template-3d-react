@@ -11,6 +11,9 @@ export default defineConfig({
     rundotGameLibrariesPlugin(),
   ],
   base: './',
+  server: {
+    allowedHosts: true,
+  },
   resolve: {
     alias: {
       // three.js r170 doesn't expose ./package.json in its exports map,
