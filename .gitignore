@@ -8,3 +8,9 @@ dist-ssr/
 .idea/
 coverage/
 .rundot-docs
+
+# StowKit
+*.stowcache
+public/cdn-assets/*
+!public/cdn-assets/CLAUDE.md
+.rundot/3d-engine-docs
