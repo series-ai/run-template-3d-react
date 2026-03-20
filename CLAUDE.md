@@ -7,6 +7,8 @@
 
 React handles **UI only** (tabs, buttons, cards, overlays). All 3D/game logic lives in plain TypeScript classes that own the Three.js renderer and game loop directly. React and the game layer meet at a single `<div>` mount point.
 
+When reasoning about orientation, movement, and camera placement, **assume all models are Y-up and face +Z forward** (positive Z is the character’s forward direction), unless a specific asset is documented otherwise.
+
 - **NEVER** use React state, effects, or hooks for game logic, asset loading, audio, animation, or scene graph management
 - **NEVER** use React Three Fiber (`@react-three/fiber`) or `@react-three/drei` — they are not in this project
 - **DO** put game logic in classes (see `GameScene.ts` as the pattern)
