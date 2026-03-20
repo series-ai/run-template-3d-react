@@ -139,6 +139,8 @@ Before writing ANY UI code, decide on an aesthetic direction that fits the game 
 - If your game calls `preventDefault()` on touch events, you **must** use `{ passive: false }` — browsers default `touchstart`/`touchmove` to passive on window/document/body, and passive listeners silently ignore `preventDefault()`. Prefer `touch-action: none` in CSS over `preventDefault()` — it's more efficient (informs the browser before any event fires)
 - For game controls overlaid on the canvas: use transparent `<div>` touch zones positioned over the canvas, **not** Three.js raycasting for UI buttons
 - Use `RundotGameAPI.triggerHapticAsync()` on meaningful interactions (purchases, confirmations) — not on every tap
+- **Prevent text selection and drag on HUD overlays** — emoji, score text, and other HUD content will get selected/dragged by the browser during thumbstick or button interactions. Always set `user-select: none; -webkit-user-select: none;` on the HUD root container. Add `e.preventDefault()` on `mousedown` handlers for draggable controls (thumbsticks, sliders) to prevent the browser's native drag behavior
+- **Mouse-based drag controls (thumbsticks, sliders)** — always listen for `mousemove` and `mouseup` on `window`, not on the element itself. If the cursor leaves the element while dragging, the element-level listeners stop firing and the control gets stuck. Start the window listeners on `mousedown` and clean them up on `mouseup`
 
 ### Using the Theme System
 - **Always use CSS variables** (`var(--color-primary)`, `var(--spacing-md)`) — never hardcode colors or sizes in component styles
