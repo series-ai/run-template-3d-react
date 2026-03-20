@@ -3,8 +3,14 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import RundotGameAPI from '@series-inc/rundot-game-sdk/api';
 import { loadStowKitPack, disposeStowKitPack } from './loadStowKitPack';
+import { GameEventEmitter, type GameState } from './GameEvents';
 
 export class GameScene {
+  readonly events = new GameEventEmitter();
+
+  private state: GameState = 'loading';
+  private score = 0;
+
   private renderer: THREE.WebGLRenderer;
   private scene: THREE.Scene;
   private camera: THREE.PerspectiveCamera;
@@ -12,8 +18,10 @@ export class GameScene {
   private clock = new THREE.Clock();
   private animationFrameId = 0;
   private resizeObserver: ResizeObserver;
-  private diceContainer: THREE.Group | null = null;
   private envMap: THREE.Texture | null = null;
+
+  // --- Demo asset (replace with your game objects) ---
+  private diceContainer: THREE.Group | null = null;
 
   constructor(container: HTMLDivElement) {
     const { clientWidth: w, clientHeight: h } = container;
@@ -24,17 +32,14 @@ export class GameScene {
       failIfMajorPerformanceCaveat: true,
     });
 
-    // Manual DPR handling — don't use setPixelRatio (breaks post-processing, GPU picking, gl_FragCoord)
     const dpr = Math.min(window.devicePixelRatio, 2);
     this.renderer.setSize(w * dpr, h * dpr, false);
     this.renderer.domElement.style.width = `${w}px`;
     this.renderer.domElement.style.height = `${h}px`;
 
-    // Tone mapping
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 0.5;
 
-    // Shadows
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -45,14 +50,11 @@ export class GameScene {
 
     this.scene = new THREE.Scene();
 
-    // Sky + environment map for IBL lighting
     const sunPosition = new THREE.Vector3(5, 8, 5);
     this.setupSky(sunPosition);
 
-    // Ambient fill (reduced — environment map provides indirect light now)
     this.scene.add(new THREE.AmbientLight(0xffffff, 0.15));
 
-    // Directional light — position matches sun so shadows align with sky
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
     dirLight.position.copy(sunPosition);
     dirLight.castShadow = true;
@@ -66,9 +68,8 @@ export class GameScene {
     dirLight.shadow.bias = -0.0005;
     dirLight.shadow.normalBias = 0.02;
     this.scene.add(dirLight);
-    this.scene.add(dirLight.target); // Required — Three.js needs the target in the scene graph
+    this.scene.add(dirLight.target);
 
-    // Ground plane that receives shadows
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(10, 10),
       new THREE.ShadowMaterial({ opacity: 0.3 }),
@@ -78,18 +79,74 @@ export class GameScene {
     ground.receiveShadow = true;
     this.scene.add(ground);
 
-
-    // Controls
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enablePan = false;
 
-    // ResizeObserver — better than window resize (element-level, fires between layout and paint)
     this.resizeObserver = new ResizeObserver(this.onResize);
     this.resizeObserver.observe(container);
 
     this.start();
     this.loadAssets();
   }
+
+  // ---------------------------------------------------------------------------
+  // State machine
+  // ---------------------------------------------------------------------------
+
+  getState(): GameState {
+    return this.state;
+  }
+
+  getScore(): number {
+    return this.score;
+  }
+
+  pause(): void {
+    if (this.state !== 'playing') return;
+    this.setState('paused');
+  }
+
+  resume(): void {
+    if (this.state !== 'paused') return;
+    this.setState('playing');
+  }
+
+  gameOver(): void {
+    if (this.state !== 'playing') return;
+    this.setState('gameover');
+  }
+
+  restart(): void {
+    this.score = 0;
+    this.events.emit('scoreChange', this.score);
+
+    // Reset demo dice rotation
+    if (this.diceContainer) {
+      this.diceContainer.rotation.set(0, 0, 0);
+    }
+
+    this.setState('playing');
+  }
+
+  private setState(next: GameState): void {
+    this.state = next;
+    this.events.emit('stateChange', next);
+  }
+
+  /** Call from game logic to change the score. Emits `scoreChange`. */
+  setScore(value: number): void {
+    this.score = value;
+    this.events.emit('scoreChange', value);
+  }
+
+  /** Shorthand: add to current score. */
+  addScore(delta: number): void {
+    this.setScore(this.score + delta);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Scene setup
+  // ---------------------------------------------------------------------------
 
   private setupSky(sunPosition: THREE.Vector3) {
     const sky = new Sky();
@@ -104,12 +161,10 @@ export class GameScene {
 
     this.scene.add(sky);
 
-    // Generate PMREM environment map from the sky for IBL (image-based lighting)
     const pmrem = new THREE.PMREMGenerator(this.renderer);
     pmrem.compileCubemapShader();
     const envScene = new THREE.Scene();
     envScene.add(sky.clone());
-    // Use fromScene to capture the sky into a cubemap
     const envRT = pmrem.fromScene(envScene, 0, 0.1, 100);
     this.envMap = envRT.texture;
     this.scene.environment = this.envMap;
@@ -132,12 +187,15 @@ export class GameScene {
     this.camera.updateProjectionMatrix();
   };
 
+  // ---------------------------------------------------------------------------
+  // Asset loading
+  // ---------------------------------------------------------------------------
+
   private async loadAssets() {
     try {
       const pack = await loadStowKitPack('default');
       const mesh = await pack.loadMesh('sm_dice');
 
-      // castShadow/receiveShadow don't propagate — traverse to enable on all child meshes
       mesh.traverse((c) => {
         if ((c as THREE.Mesh).isMesh) {
           c.castShadow = true;
@@ -148,25 +206,47 @@ export class GameScene {
       this.diceContainer = new THREE.Group();
       this.diceContainer.add(mesh);
       this.scene.add(this.diceContainer);
+
+      this.setState('playing');
     } catch (err) {
       RundotGameAPI.error('[GameScene] Error loading assets:', err);
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // Game loop
+  // ---------------------------------------------------------------------------
+
   private update = () => {
     this.animationFrameId = requestAnimationFrame(this.update);
     const delta = this.clock.getDelta();
 
-    if (this.diceContainer) {
-      this.diceContainer.rotation.x += delta * 0.5;
-      this.diceContainer.rotation.y += delta * 0.7;
+    switch (this.state) {
+      case 'loading':
+        break;
+      case 'playing':
+        this.updatePlaying(delta);
+        break;
+      case 'paused':
+        break;
+      case 'gameover':
+        break;
     }
 
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
   };
 
-  start() {
+  /** Main game tick — put your game logic here. */
+  private updatePlaying(delta: number): void {
+    // Demo: spin the dice. Replace with your game logic.
+    if (this.diceContainer) {
+      this.diceContainer.rotation.x += delta * 0.5;
+      this.diceContainer.rotation.y += delta * 0.7;
+    }
+  }
+
+  private start() {
     this.clock.start();
     this.update();
   }
@@ -178,6 +258,7 @@ export class GameScene {
     this.envMap?.dispose();
     this.renderer.dispose();
     this.renderer.domElement.remove();
+    this.events.removeAll();
     disposeStowKitPack('default');
   }
 }

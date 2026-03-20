@@ -5,10 +5,11 @@
 
 ## Architecture
 
-React handles **UI only** (tabs, buttons, cards, overlays). All 3D/game logic lives in plain TypeScript classes that own the Three.js renderer and game loop directly. React and the game layer meet at a single `<div>` mount point.
+React handles **UI only** (HUD overlays, menus, popups). All 3D/game logic lives in plain TypeScript classes that own the Three.js renderer and game loop directly. React and the game layer meet at a single `<div>` mount point.
 
 When reasoning about orientation, movement, and camera placement, **assume all models are Y-up and face +Z forward** (positive Z is the character’s forward direction), unless a specific asset is documented otherwise.
 
+- **NEVER** use `useEffect` — it is banned in this project. Use `useCallback` refs for mount/unmount logic (see `App.tsx` pattern)
 - **NEVER** use React state, effects, or hooks for game logic, asset loading, audio, animation, or scene graph management
 - **NEVER** use React Three Fiber (`@react-three/fiber`) or `@react-three/drei` — they are not in this project
 - **DO** put game logic in classes (see `GameScene.ts` as the pattern)
@@ -17,12 +18,13 @@ When reasoning about orientation, movement, and camera placement, **assume all m
 ## File Structure (as-shipped)
 
 - **src/main.tsx** — Entry point. Applies theme via `applyTheme(theme)`, mounts `<App />` inside `ErrorBoundary` and `StrictMode`
-- **src/App.tsx** — Shell: mounts fullscreen `GameScene` into a `<div>`. Includes landscape warning overlay
-- **src/GameScene.ts** — Game class. Owns Three.js renderer, camera, scene, lights, controls, `requestAnimationFrame` loop, and asset loading. Extend this for game logic
+- **src/App.tsx** — Shell: mounts `GameScene`, subscribes to game events, renders HUD overlay (score display, game-over panel)
+- **src/GameScene.ts** — Game class. Owns Three.js renderer, camera, scene, lights, controls, `requestAnimationFrame` loop, state machine, asset loading, and event emitter. Extend this for game logic
+- **src/GameEvents.ts** — Typed event emitter (`GameEventEmitter`) and `GameState` type. The bridge between game logic and React UI
 - **src/loadStowKitPack.ts** — Plain async function to load StowKit `.stow` packs. Has a simple cache. No React
-- **src/components/** — Reusable UI: `Button`, `Card`, `Stack`, `ErrorBoundary`
-- **src/theme/** — Design tokens: `default.ts`, `types.ts`, `applyTheme.ts`. CSS variables set on `document.documentElement`
-- **src/style.css** — Global styles; uses theme CSS variables (e.g. `--color-primary`, `--spacing-md`)
+- **src/components/** — Reusable UI: `ErrorBoundary`
+- **src/theme.ts** — Color tokens and `applyTheme()`. Edit colors here to match your game's aesthetic
+- **src/style.css** — Global styles; uses theme CSS color variables (e.g. `var(--color-primary)`)
 - **public/** — Static assets. Small essentials here; large assets in **public/cdn-assets/** (deployed to CDN via `rundot deploy`)
 - **vite.config.ts** — Vite + `@vitejs/plugin-react` + `rundotGameLibrariesPlugin()` from SDK; `base: './'`; esbuild/build target `es2022`
 
@@ -30,15 +32,20 @@ When reasoning about orientation, movement, and camera placement, **assume all m
 
 - **3D/Game:** All game logic goes in plain TypeScript classes. `GameScene` owns the Three.js `WebGLRenderer`, camera, scene, and `requestAnimationFrame` loop. Load assets with `loadStowKitPack()`. Use `three` directly — `OrbitControls` from `three/addons/controls/OrbitControls.js`, etc. React never touches the scene graph.
 - **StowKit loading:** Always use `loadStowKitPack(packName)` from `src/loadStowKitPack.ts` — it handles CDN fetch, WASM config, and caching. Never load `.stow` files directly with `StowKitLoader.load()` in this template (CDN requires `RundotGameAPI.cdn.fetchAsset`).
-- **React ↔ Game boundary:** React renders a `<div>`, passes it to the game class on mount, and calls `dispose()` on unmount. That's it. If the game needs to communicate state to the UI (e.g. score, health), expose it via callbacks or an event emitter — not React state driving the game.
-- **RundotGameAPI:** Import `RundotGameAPI from '@series-inc/rundot-game-sdk/api'`. Use `RundotGameAPI.cdn.fetchAsset('filename.png')` (returns Promise<Blob>) for CDN assets; `RundotGameAPI.appStorage` for persistence; `RundotGameAPI.ads`, `RundotGameAPI.popups`, `RundotGameAPI.triggerHapticAsync`, `RundotGameAPI.system.getSafeArea()` / `getDevice()` / `getEnvironment()`; `RundotGameAPI.error()` for logging. No initialization in code — SDK is wired by Vite plugin.
-- **Theme:** Edit `src/theme/default.ts`. `applyTheme(theme)` runs once in main.tsx; CSS uses variables like `var(--color-primary)`.
+- **Game states:** `GameScene` has a state machine (`'loading' | 'playing' | 'paused' | 'gameover'`). The `update()` loop dispatches to `updatePlaying()` etc. based on state. Call `game.pause()`, `game.resume()`, `game.gameOver()`, `game.restart()` to transition. All transitions emit a `stateChange` event.
+- **Game events (Game → React):** `GameScene.events` is a typed `GameEventEmitter` from `src/GameEvents.ts`. React subscribes in the `useCallback` ref that mounts the game: `game.events.on('scoreChange', setScore)`. To add a new event, extend `GameEventMap` in `GameEvents.ts` and call `this.events.emit('yourEvent', data)` from `GameScene`. The game class never imports React.
+- **HUD overlay:** `App.tsx` renders a `.hud` div as an absolute-positioned sibling of `.scene-container`. It listens to game events and renders score, game-over panel, etc. HUD elements use `pointer-events: none` on the container, `pointer-events: auto` on interactive children.
+- **Score:** Call `game.setScore(n)` or `game.addScore(delta)` from game logic — these emit `scoreChange` which the HUD picks up automatically.
+- **RundotGameAPI:** Import `RundotGameAPI from '@series-inc/rundot-game-sdk/api'`. Use `RundotGameAPI.cdn.fetchAsset('filename.png')` (returns Promise<Blob>) for CDN assets; `RundotGameAPI.appStorage` for persistence; `RundotGameAPI.ads`, `RundotGameAPI.popups`, `RundotGameAPI.system.getSafeArea()` / `getDevice()` / `getEnvironment()`; `RundotGameAPI.error()` for logging. No initialization in code — SDK is wired by Vite plugin.
+- **Theme:** Edit `src/theme.ts`. `applyTheme(theme)` runs once in main.tsx; CSS uses variables like `var(--color-primary)`. Only color tokens — no spacing/radius/font variables.
 
 ## What to Modify
 
-- **New 3D game logic** — Extend `GameScene` in `src/GameScene.ts` or create new game classes. Load assets with `loadStowKitPack()`. All game logic stays in plain TypeScript — no React hooks or state.
+- **Game logic** — Put gameplay in `updatePlaying()` inside `GameScene.ts`. Call `this.addScore()` to update score, `this.gameOver()` when the game ends. Create new game classes as needed — all game logic stays in plain TypeScript, no React hooks or state.
+- **New events** — Add entries to `GameEventMap` in `src/GameEvents.ts`, emit from `GameScene`, subscribe in `App.tsx`.
+- **New HUD elements** — Add React elements inside the `.hud` div in `App.tsx`. Subscribe to game events via `game.events.on(...)`. Never render HUD as 3D text or sprites.
 - **New CDN assets** — Add files to `public/cdn-assets/`; load in code with `RundotGameAPI.cdn.fetchAsset('filename.ext')`. Use `public/` for small assets referenced by path.
-- **Look and feel** — `src/theme/default.ts` and `src/style.css`.
+- **Look and feel** — `src/theme.ts` for colors, `src/style.css` for styles.
 - **Build/deploy** — `npm run build`; `rundot deploy` for production (includes CDN upload). Optional: `RUNDOT_GAME_DISABLE_EMBEDDED_LIBS=true` for bundled build.
 
 ## StowKit Asset Pipeline
@@ -65,7 +72,7 @@ Before writing ANY UI code, decide on an aesthetic direction that fits the game 
 
 **Theme Colors:**
 - Pick ONE dominant accent color that matches the game's mood. Add 1–2 supporting accents max. Do not evenly distribute 5 pastel colors — that's a SaaS palette, not a game.
-- Update `src/theme/default.ts` FIRST — set `primary`, `secondary`, `background`, `surface` to match the game's world. Every UI element pulls from these tokens. A space game gets deep blues and cyan accents. A dungeon crawler gets warm stone and gold. A casual game gets bright, saturated primaries.
+- Update `src/theme.ts` FIRST — set `primary`, `secondary`, `background`, `surface` to match the game's world. Every UI element pulls from these tokens. A space game gets deep blues and cyan accents. A dungeon crawler gets warm stone and gold. A casual game gets bright, saturated primaries.
 - **NEVER** use the default purple/blue gradient as shipped — it's a placeholder, not a design choice.
 
 **Dark/Translucent Panels (not white cards):**
@@ -116,7 +123,7 @@ Before writing ANY UI code, decide on an aesthetic direction that fits the game 
 - The canvas (Three.js) composites as its own GPU layer. HTML overlays sit on top naturally — no `z-index` needed if they're siblings of `.scene-container`
 - Game HUD overlays: use `position: absolute` within the game container (not `position: fixed` — there's no scrolling, and fixed creates unnecessary compositor layers). Set `pointer-events: none` on the overlay container, `pointer-events: auto` on interactive children only
 - Use `RundotGameAPI.system.getSafeArea()` to inset UI away from notches/home indicators — apply returned padding to fixed overlays, not just the app shell
-- For fullscreen game scenes (no tabs), hide the `TabBar` and let `.scene-container` fill the app container; overlay HUD elements as absolutely-positioned HTML siblings of the canvas div
+- `.scene-container` fills the app container; overlay HUD elements as absolutely-positioned HTML siblings of the canvas div
 
 ### Preventing Jitter Between HTML Overlays and Canvas
 - **Only animate `transform` and `opacity`** on overlay elements — these are the only two CSS properties handled by the compositor thread. Animating `top`, `left`, `width`, `height`, `margin`, `padding`, `box-shadow` etc. forces layout on the main thread and competes with your `requestAnimationFrame` game loop, causing mutual stutter
@@ -138,19 +145,19 @@ Before writing ANY UI code, decide on an aesthetic direction that fits the game 
 - Set `touch-action: none` on the canvas container — prevents the browser from intercepting touches for pan, zoom, or double-tap-to-zoom. The browser resolves `touch-action` by intersecting values up the DOM tree, so setting it on the container covers all children
 - If your game calls `preventDefault()` on touch events, you **must** use `{ passive: false }` — browsers default `touchstart`/`touchmove` to passive on window/document/body, and passive listeners silently ignore `preventDefault()`. Prefer `touch-action: none` in CSS over `preventDefault()` — it's more efficient (informs the browser before any event fires)
 - For game controls overlaid on the canvas: use transparent `<div>` touch zones positioned over the canvas, **not** Three.js raycasting for UI buttons
-- Use `RundotGameAPI.triggerHapticAsync()` on meaningful interactions (purchases, confirmations) — not on every tap
 - **Prevent text selection and drag on HUD overlays** — emoji, score text, and other HUD content will get selected/dragged by the browser during thumbstick or button interactions. Always set `user-select: none; -webkit-user-select: none;` on the HUD root container. Add `e.preventDefault()` on `mousedown` handlers for draggable controls (thumbsticks, sliders) to prevent the browser's native drag behavior
 - **Mouse-based drag controls (thumbsticks, sliders)** — always listen for `mousemove` and `mouseup` on `window`, not on the element itself. If the cursor leaves the element while dragging, the element-level listeners stop firing and the control gets stuck. Start the window listeners on `mousedown` and clean them up on `mouseup`
 
 ### Using the Theme System
-- **Always use CSS variables** (`var(--color-primary)`, `var(--spacing-md)`) — never hardcode colors or sizes in component styles
-- Update `src/theme/default.ts` to match the game's aesthetic BEFORE building any UI — the defaults are placeholders
+- **Always use CSS color variables** (`var(--color-primary)`, `var(--color-surface)`) — never hardcode colors in component styles
+- Update `src/theme.ts` to match the game's aesthetic BEFORE building any UI — the defaults are placeholders
 
 ### Game HUD Patterns
 - Score/health/timer: absolutely-positioned HTML elements over the canvas — fast to update, accessible, styled with CSS. **Never** render HUD as 3D text or sprites
-- Use the `Card` component for popup modals (game over, settings, shop) — it already has the right border, radius, and backdrop
-- Animate HUD changes with CSS transitions on `transform`/`opacity` only (`--animation-fast` for score ticks, `--animation-normal` for panel slides) — don't use JS `requestAnimationFrame` for UI animation, that's for the game loop
-- Communicate game state → React UI via an event emitter or callback on the game class (e.g. `onScoreChange`, `onGameOver`) — React subscribes in `useEffect`, updates local state. Game class never imports React
+- The template ships with a working HUD in `App.tsx`: score display at top, game-over overlay with "Play Again" button. See `.hud` styles in `style.css`
+- Animate HUD changes with CSS transitions on `transform`/`opacity` only — don't use JS `requestAnimationFrame` for UI animation, that's for the game loop
+- Game → React communication: `game.events.on('scoreChange', setScore)` in the `useCallback` ref that mounts the game. Add new event types to `GameEventMap` in `src/GameEvents.ts`. Game class never imports React
+- React → Game communication: call public methods on `gameRef.current` (e.g. `game.restart()`, `game.pause()`)
 
 ### Mobile Renderer Settings
 - **`antialias`**: Native MSAA (`antialias: true`) is the cheapest AA when NOT using post-processing — but 4x MSAA quadruples the color buffer memory. On low-end mobile, skip AA and render at 1.25–1.5x DPR instead (CSS downscale provides implicit AA)
@@ -168,6 +175,107 @@ Before writing ANY UI code, decide on an aesthetic direction that fits the game 
 - StowKit `pack.loadMesh()` returns a `THREE.Group` with nested children — always traverse when setting per-mesh properties
 - Always call `renderer.shadowMap.enabled = true` and set `dirLight.castShadow = true` for shadows to work
 - Near clipping plane (`camera.near`) too small causes z-fighting artifacts — if the camera zooms out far, increase `near` (e.g. `0.5` or `1` instead of `0.1`). Keep the near/far ratio reasonable (< 10000:1).
+
+## Game Feel & Juice
+
+A game that plays correctly but *feels* flat will get abandoned in seconds. Polish is not optional — it's the difference between "tech demo" and "game." Every interaction should have a response, every state change should be visible, and the world should feel alive even when the player isn't doing anything.
+
+### Tweens — The Right Way
+
+Use inline tweens driven by the game loop (`delta` from `clock.getDelta()`). Do **not** add a tween library — they're unnecessary overhead for what amounts to interpolating a value over time.
+
+**Simple tween pattern (use this):**
+```ts
+// In your game class
+private cameraShakeTimer = 0;
+private cameraShakeIntensity = 0;
+
+shakeCamera(intensity: number, duration: number) {
+  this.cameraShakeIntensity = intensity;
+  this.cameraShakeTimer = duration;
+}
+
+updatePlaying(delta: number) {
+  if (this.cameraShakeTimer > 0) {
+    this.cameraShakeTimer -= delta;
+    const t = this.cameraShakeTimer / 0.3; // normalized 1→0
+    const shake = this.cameraShakeIntensity * t;
+    this.camera.position.x += (Math.random() - 0.5) * shake;
+    this.camera.position.y += (Math.random() - 0.5) * shake;
+  }
+}
+```
+
+**Lerp for smooth transitions (use constantly):**
+```ts
+// Smooth camera follow, value changes, color transitions, etc.
+object.position.lerp(targetPosition, 1 - Math.pow(0.001, delta));
+
+// For scalars:
+this.displayScore += (this.actualScore - this.displayScore) * (1 - Math.pow(0.0001, delta));
+```
+
+The `Math.pow(0.001, delta)` pattern is frame-rate-independent exponential decay — it reaches the target at the same visual speed whether running at 30fps or 120fps. The smaller the base (0.001 = fast, 0.1 = slow), the snappier the lerp.
+
+**Easing functions (copy-paste these):**
+```ts
+const easeOutBack = (t: number) => 1 + 2.7 * Math.pow(t - 1, 3) + 1.7 * Math.pow(t - 1, 2);
+const easeOutElastic = (t: number) => t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * (2 * Math.PI / 3)) + 1;
+const easeInOutCubic = (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+```
+
+Use `easeOutBack` for things popping into existence (overshoot feels punchy). Use `easeOutElastic` sparingly for celebration moments. Use `easeInOutCubic` for camera moves and UI slides.
+
+### What to Juice (Priority Order)
+
+1. **Scoring** — When the score changes, the HUD number should scale up briefly (`transform: scale(1.2)` via CSS transition) and the scored object should flash or pop. Never just silently increment a number.
+2. **Collisions/impacts** — Camera shake (short, 0.1–0.3s), object squash-and-stretch, particle burst. Even tiny shakes make hits feel real.
+3. **Spawning/despawning** — Objects should scale from 0 or fade in. Destroyed objects should shrink, fly away, or burst — never just disappear.
+4. **Idle state** — Objects should breathe (subtle sine-wave scale), bob, or rotate slowly. A static scene feels broken. `object.position.y = baseY + Math.sin(time * 2) * 0.05;`
+5. **Touch/tap feedback** — The tapped object should react instantly (scale pulse, brightness flash). Latency between tap and visual response must be under one frame.
+6. **State transitions** — Game over should have a dramatic pause (freeze game for 0.5s, then show overlay). Starting a new game should have a countdown or whoosh, not just a state flip.
+
+### Squash and Stretch
+
+The most important animation principle for game feel. When an object moves fast, stretch it along its velocity. When it lands or impacts, squash it:
+```ts
+// On impact:
+mesh.scale.set(1.3, 0.7, 1.3); // squash
+// Then lerp back to (1, 1, 1) over ~0.2s
+
+// While falling/moving fast:
+const speed = velocity.length();
+const stretch = 1 + speed * 0.1;
+mesh.scale.set(1 / Math.sqrt(stretch), stretch, 1 / Math.sqrt(stretch));
+```
+
+### Screen Shake
+
+Shake is the cheapest, highest-impact juice. Use it for every hit, explosion, and big score event. Keep it short (0.1–0.3s) and small (0.02–0.1 units) — players should feel it, not get nauseous.
+
+### Particles
+
+For web/mobile, emit particles as simple `THREE.Points` or small billboard quads. Keep particle counts low (10–30 per burst, not 200). Recycle particles from a pool — don't create/destroy geometry per burst.
+
+### HUD Juice (CSS-only)
+
+HUD animations are CSS-only — never use `requestAnimationFrame` for UI animation:
+```css
+.hud-score {
+  transition: transform 150ms ease-out;
+}
+.hud-score.bump {
+  transform: scale(1.25);
+}
+```
+Toggle the `.bump` class from React, remove it after the transition. For number ticking, use the exponential lerp pattern via `requestAnimationFrame` *only* if you need smooth sub-frame counting — otherwise CSS transitions on `transform` are sufficient and cheaper.
+
+### What NOT to Do
+
+- **Don't over-juice** — If everything bounces, shakes, and particles constantly, nothing stands out. Reserve elastic/overshoot easing for celebration moments, use subtle lerps for everything else.
+- **Don't use CSS animations for game objects** — CSS animations run on the compositor thread and can't be synced to your game clock. Use them only for HUD elements.
+- **Don't add a tween library** (GSAP, Tween.js, etc.) — they add bundle size and a second animation loop competing with your `requestAnimationFrame`. The lerp + timer patterns above cover 99% of game tween needs.
+- **Don't animate material colors per-frame** — it's a GPU state change that breaks batching. Pre-bake color variants or use vertex colors.
 
 ## Skinned Mesh + Animation
 
