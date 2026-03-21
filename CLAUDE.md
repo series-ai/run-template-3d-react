@@ -7,7 +7,7 @@
 
 React handles **UI only** (HUD overlays, menus, popups). All 3D/game logic lives in plain TypeScript classes that own the Three.js renderer and game loop directly. React and the game layer meet at a single `<div>` mount point.
 
-When reasoning about orientation, movement, and camera placement, **assume all models are Y-up and face +Z forward** (positive Z is the character’s forward direction), unless a specific asset is documented otherwise.
+When reasoning about orientation, movement, and camera placement, **assume all models are Y-up and face +Z forward** (positive Z is the character’s forward direction). In this right-handed system, **+X is the character’s LEFT** and **−X is the character’s RIGHT**. Do not assume +X = right — this is the most common source of inverted controls.
 
 - **NEVER** use `useEffect` — it is banned in this project. Use `useCallback` refs for mount/unmount logic (see `App.tsx` pattern)
 - **NEVER** use React state, effects, or hooks for game logic, asset loading, audio, animation, or scene graph management
@@ -167,6 +167,57 @@ Before writing ANY UI code, decide on an aesthetic direction that fits the game 
 - **`failIfMajorPerformanceCaveat: true`**: Causes context creation to fail if the browser would use software rendering — better to show a fallback message than run at 2fps
 - **NEVER** use `logarithmicDepthBuffer` — it uses `gl_FragDepth` which disables Early-Z testing on the GPU, devastating for mobile performance
 - Keep draw calls under ~100–200 for 60fps on mid-range mobile — use `InstancedMesh` or merged geometries to reduce. Check `renderer.info.render.calls` to monitor
+
+## Character Controller & Joystick Mapping
+
+Models face **+Z forward**, **+Y up** in Three.js's right-handed coordinate system. Because a character facing +Z faces *toward* the default camera (which looks down −Z), **+X is the character's LEFT and −X is the character's RIGHT**. This is the #1 source of inverted controls — getting the X sign wrong.
+
+**The #1 bug:** joystick axes get swapped or negated, producing inverted/rotated controls. Always derive movement from the **character's facing direction**, not raw axis assumptions. Remember: +X = character's LEFT, not right.
+
+**Correct joystick → world mapping (camera behind character, looking +Z):**
+```ts
+// Screen-space joystick: X right is positive, Y UP is negative (DOM convention)
+// +X = character's LEFT, so negate joystick X so "right" moves the character right (−X)
+const moveX = -joystickX;      // joystick right → world −X (character's right)
+const moveZ = -joystickY;      // joystick up (negative) → world +Z (character's forward)
+
+character.position.x += moveX * speed * delta;
+character.position.z += moveZ * speed * delta;
+```
+
+**Character rotation to face movement direction:**
+```ts
+if (moveX !== 0 || moveZ !== 0) {
+  const targetAngle = Math.atan2(moveX, moveZ);
+  character.rotation.y = targetAngle;
+}
+```
+
+Verify the rotation is correct:
+- Joystick UP → moveX=0, moveZ>0 → `atan2(0, +)` = 0 → faces +Z (forward) ✓
+- Joystick RIGHT → moveX<0, moveZ=0 → `atan2(-, 0)` = −π/2 → faces −X (character's right) ✓
+- Joystick LEFT → moveX>0, moveZ=0 → `atan2(+, 0)` = π/2 → faces +X (character's left) ✓
+
+**Common mistakes to avoid:**
+- Forgetting to negate joystick X — pushing right moves character LEFT (most common inversion bug)
+- Forgetting to negate joystick Y — pushing up moves character backward
+- Using `atan2(moveZ, moveX)` — rotates character 90° off from movement
+- Assuming +X is the character's right — it's the LEFT in this coordinate system
+- Applying joystick input in camera-local space without transforming to world space when the camera orbits
+
+**Camera-relative movement (orbiting/rotating camera):**
+```ts
+const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(camera.quaternion);
+forward.y = 0;
+forward.normalize();
+const right = new THREE.Vector3(-1, 0, 0).applyQuaternion(camera.quaternion);
+right.y = 0;
+right.normalize();
+
+const move = new THREE.Vector3();
+move.addScaledVector(right, joystickX);
+move.addScaledVector(forward, -joystickY);
+```
 
 ## Three.js Gotchas
 
