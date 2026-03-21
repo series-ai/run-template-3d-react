@@ -2,9 +2,9 @@ import RundotGameAPI from '@series-inc/rundot-game-sdk/api';
 import { StowKitLoader, AssetMemoryCache, type StowKitPack } from '@series-inc/stowkit-three-loader';
 
 const STOWKIT_CONFIG = {
-  basisPath: '/stowkit/basis/',
-  dracoPath: '/stowkit/draco/',
-  wasmPath: '/stowkit/stowkit_reader.wasm',
+  basisPath: './stowkit/basis/',
+  dracoPath: './stowkit/draco/',
+  wasmPath: './stowkit/stowkit_reader.wasm',
 } as const;
 
 const packCache = new Map<string, StowKitPack>();
