@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "stringId": "sawblade",
+  "tags": [],
+  "pack": "default",
+  "type": "glbContainer",
+  "preserveHierarchy": true,
+  "children": [
+    {
+      "name": "Obstacle_T_Saw_Diffuse.png",
+      "childType": "texture",
+      "stringId": "obstacle_t_saw_diffuse",
+      "quality": "fastest",
+      "resize": "quarter",
+      "filtering": "linear",
+      "generateMipmaps": false,
+      "cache": {
+        "sourceSize": 47168,
+        "sourceLastModified": 1773439905499.9414,
+        "settingsHash": "2|q=0|r=2|f=0|m=false"
+      }
+    },
+    {
+      "name": "Arm",
+      "childType": "staticMesh",
+      "stringId": "arm",
+      "dracoQuality": "balanced",
+      "materialOverrides": {
+        "0": "SawBlade.glb/M_SawBlade.stowmat"
+      },
+      "sceneNodeNames": [
+        "Arm",
+        "Saw"
+      ],
+      "cache": {
+        "sourceSize": 47168,
+        "sourceLastModified": 1773439905499.9414,
+        "settingsHash": "1|dq=1"
+      }
+    },
+    {
+      "name": "M_SawBlade.stowmat",
+      "childType": "materialSchema",
+      "stringId": "M_SawBlade",
+      "materialConfig": {
+        "schemaId": "",
+        "properties": [
+          {
+            "fieldName": "BaseColor",
+            "fieldType": "texture",
+            "previewFlag": "mainTex",
+            "value": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "textureAsset": "SawBlade.glb/Obstacle_T_Saw_Diffuse.png"
+          },
+          {
+            "fieldName": "Tint",
+            "fieldType": "color",
+            "previewFlag": "tint",
+            "value": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "textureAsset": null
+          },
+          {
+            "fieldName": "Metallic",
+            "fieldType": "float",
+            "previewFlag": "none",
+            "value": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "textureAsset": null
+          },
+          {
+            "fieldName": "Roughness",
+            "fieldType": "float",
+            "previewFlag": "none",
+            "value": [
+              0.5,
+              0,
+              0,
+              0
+            ],
+            "textureAsset": null
+          }
+        ]
+      }
+    }
+  ]
+}

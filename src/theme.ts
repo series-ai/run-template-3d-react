@@ -1,10 +1,10 @@
 export const theme = {
-  background: '#1a1a2e',
-  surface: '#16213e',
-  primary: '#667eea',
-  secondary: '#764ba2',
+  background: '#0a0e1a',
+  surface: '#111827',
+  primary: '#ffce2e',
+  secondary: '#ff6b6b',
   text: '#ffffff',
-  textMuted: 'rgba(255, 255, 255, 0.7)',
+  textMuted: 'rgba(255, 255, 255, 0.6)',
 };
 
 export type Theme = typeof theme;

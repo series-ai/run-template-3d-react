@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "stringId": "tinkerbot",
+  "tags": [],
+  "pack": "default",
+  "type": "glbContainer",
+  "preserveHierarchy": true,
+  "children": [
+    {
+      "name": "T_Tinker_Diffuse.png",
+      "childType": "texture",
+      "stringId": "t_tinker_diffuse",
+      "quality": "fastest",
+      "resize": "quarter",
+      "filtering": "linear",
+      "generateMipmaps": false,
+      "cache": {
+        "sourceSize": 151392,
+        "sourceLastModified": 1772940077095.3667,
+        "settingsHash": "2|q=0|r=2|f=0|m=false"
+      }
+    },
+    {
+      "name": "Bot",
+      "childType": "staticMesh",
+      "stringId": "bot",
+      "dracoQuality": "balanced",
+      "materialOverrides": {
+        "0": "TinkerBot.glb/M_TinkerBot.stowmat"
+      },
+      "sceneNodeNames": [
+        "Bot",
+        "Key"
+      ],
+      "cache": {
+        "sourceSize": 151392,
+        "sourceLastModified": 1772940077095.3667,
+        "settingsHash": "1|dq=1"
+      }
+    },
+    {
+      "name": "M_TinkerBot.stowmat",
+      "childType": "materialSchema",
+      "stringId": "M_TinkerBot",
+      "materialConfig": {
+        "schemaId": "",
+        "properties": [
+          {
+            "fieldName": "BaseColor",
+            "fieldType": "texture",
+            "previewFlag": "mainTex",
+            "value": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "textureAsset": "TinkerBot.glb/T_Tinker_Diffuse.png"
+          },
+          {
+            "fieldName": "Tint",
+            "fieldType": "color",
+            "previewFlag": "tint",
+            "value": [
+              1,
+              1,
+              1,
+              1
+            ],
+            "textureAsset": null
+          },
+          {
+            "fieldName": "Metallic",
+            "fieldType": "float",
+            "previewFlag": "none",
+            "value": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "textureAsset": null
+          },
+          {
+            "fieldName": "Roughness",
+            "fieldType": "float",
+            "previewFlag": "none",
+            "value": [
+              0.5,
+              0,
+              0,
+              0
+            ],
+            "textureAsset": null
+          }
+        ]
+      }
+    }
+  ]
+}

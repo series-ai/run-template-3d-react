@@ -1,4 +1,4 @@
-export type GameState = 'loading' | 'playing' | 'paused' | 'gameover';
+export type GameState = 'loading' | 'ready' | 'playing' | 'paused' | 'gameover';
 
 export type GameEventMap = {
   stateChange: GameState;

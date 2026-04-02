@@ -14,6 +14,9 @@ function App() {
       gameRef.current = game;
       game.events.on('stateChange', setGameState);
       game.events.on('scoreChange', setScore);
+    } else if (!container && gameRef.current) {
+      gameRef.current.dispose();
+      gameRef.current = null;
     }
   }, []);
 
@@ -27,14 +30,24 @@ function App() {
 
       {gameState !== 'loading' && (
         <div className="hud">
-          <div className="hud-score">{score}</div>
+          {gameState === 'ready' && (
+            <div className="hud-tap-prompt">
+              <div className="hud-title">FLAPPY CLANKER</div>
+              <div className="hud-subtitle">TAP TO START</div>
+            </div>
+          )}
+
+          {gameState === 'playing' && (
+            <div className="hud-score">{score}</div>
+          )}
 
           {gameState === 'gameover' && (
             <div className="hud-gameover">
-              <div className="hud-gameover-title">Game Over</div>
+              <div className="hud-gameover-title">WRECKED</div>
               <div className="hud-gameover-score">{score}</div>
+              <div className="hud-gameover-label">SCORE</div>
               <button className="hud-gameover-btn" onClick={handleRestart}>
-                Play Again
+                TRY AGAIN
               </button>
             </div>
           )}

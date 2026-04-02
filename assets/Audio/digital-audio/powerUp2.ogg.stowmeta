@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "stringId": "audio/digital-audio/powerup2",
+  "tags": [
+    "audio",
+    "sfx",
+    "powerup",
+    "game",
+    "ui",
+    "collectible",
+    "ogg"
+  ],
+  "pack": "default",
+  "type": "audio",
+  "aacQuality": "high",
+  "sampleRate": "44100",
+  "cache": {
+    "sourceSize": 8302,
+    "sourceLastModified": 1775153891773.7788,
+    "settingsHash": "3|aq=3|sr=44100"
+  }
+}
