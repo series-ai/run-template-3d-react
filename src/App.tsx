@@ -1,34 +1,46 @@
-import { useState } from 'react';
-import { TabBar } from './components/TabBar';
-import { TAB_CONFIG, DEFAULT_TAB_ID, type TabId } from './tabs/tabConfig';
+import { useRef, useState, useCallback } from 'react';
+import { GameScene } from './GameScene';
+import type { GameState } from './GameEvents';
 import './style.css';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<TabId>(DEFAULT_TAB_ID);
+  const gameRef = useRef<GameScene | null>(null);
+  const [score, setScore] = useState(0);
+  const [gameState, setGameState] = useState<GameState>('loading');
 
-  const activeTabDefinition = TAB_CONFIG.find((tab) => tab.id === activeTab) ?? TAB_CONFIG[0];
-  const tabContent = activeTabDefinition.render();
+  const sceneRef = useCallback((container: HTMLDivElement | null) => {
+    if (container && !gameRef.current) {
+      const game = new GameScene(container);
+      gameRef.current = game;
+      game.events.on('stateChange', setGameState);
+      game.events.on('scoreChange', setScore);
+    }
+  }, []);
+
+  const handleRestart = useCallback(() => {
+    gameRef.current?.restart();
+  }, []);
 
   return (
-    <>
-      {/* Landscape Warning */}
-      <div className="landscape-warning">
-        <div className="landscape-warning-icon">📱</div>
-        <h2>Portrait Mode Only</h2>
-        <p>Please rotate your device to portrait orientation</p>
-      </div>
+    <div className="app-container">
+      <div ref={sceneRef} className="scene-container" />
 
-      {/* Main App */}
-      <div className="app-container">
-        <div className="content-area">
-          <div className="tab-content tab-fade-in" key={activeTab}>
-            {tabContent}
-          </div>
+      {gameState !== 'loading' && (
+        <div className="hud">
+          <div className="hud-score">{score}</div>
+
+          {gameState === 'gameover' && (
+            <div className="hud-gameover">
+              <div className="hud-gameover-title">Game Over</div>
+              <div className="hud-gameover-score">{score}</div>
+              <button className="hud-gameover-btn" onClick={handleRestart}>
+                Play Again
+              </button>
+            </div>
+          )}
         </div>
-
-        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
-      </div>
-    </>
+      )}
+    </div>
   );
 }
 

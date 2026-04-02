@@ -1,16 +1,16 @@
-# Simple React Template
+# 3D React Template
 
-A minimal React + Vite + TypeScript template for RUN.game apps. It includes the essential SDK patterns while keeping the UI scaffolding simple.
+A React + Three.js + Vite + TypeScript template for RUN.game apps. React handles HUD overlays while Three.js owns the 3D scene directly.
 
 ## What's Included
 
-- **Tab navigation** — 3 demo tabs (Home, Ads, Settings) with a fixed bottom tab bar
-- **Theme system** — Centralized design tokens applied as CSS variables
-- **appStorage** — Counter demo with save/load via `RundotGameAPI.appStorage`
-- **Ad integration** — Interstitial + rewarded ad buttons
+- **Game state machine** — `loading` / `playing` / `paused` / `gameover` states with transitions
+- **Event bridge** — Typed event emitter connecting game logic to React UI (score, state changes)
+- **HUD overlay** — Score display + game-over panel, wired to game events
+- **Three.js scene** — Fullscreen 3D renderer with sky, shadows, OrbitControls, and StowKit asset loading
+- **StowKit pipeline** — Dice mesh loaded from `.stow` pack via CDN as a working demo
+- **Theme system** — Color tokens applied as CSS variables
 - **Error boundary** — Catches and displays errors gracefully
-- **Safe area handling** — Tab bar respects device insets
-- **Landscape warning** — CSS-only portrait orientation guard
 
 ## Getting Started
 
@@ -23,18 +23,21 @@ npm run dev
 
 ```
 src/
-├── components/    # Button, Card, Stack, ErrorBoundary, TabBar
-├── tabs/          # HomeTab, AdsTab, SettingsTab, tabConfig
-├── theme/         # Design tokens (colors, spacing, fonts)
-├── App.tsx        # Minimal shell: tabs + content
-├── main.tsx       # Entry point
-└── style.css      # Global styles
+├── components/         # ErrorBoundary
+├── App.tsx             # Shell: mounts GameScene, renders HUD overlay
+├── GameScene.ts        # Three.js game class with state machine
+├── GameEvents.ts       # Typed event emitter (game → React bridge)
+├── loadStowKitPack.ts  # StowKit pack loader
+├── theme.ts            # Color tokens + applyTheme
+├── main.tsx            # Entry point
+└── style.css           # Global + HUD styles
 ```
 
 ## Customizing
 
-1. **Add tabs** — Edit `src/tabs/tabConfig.tsx` to add/remove tabs
-2. **Change theme** — Edit `src/theme/default.ts` to update colors, spacing, etc.
-3. **Add components** — Create new components in `src/components/`
-
-For the full-featured template with overlays, auto-hide scroll, and TopBar, see `run-template-2d-react`.
+1. **Game logic** — Put gameplay in `updatePlaying()` inside `GameScene.ts`
+2. **Score** — Call `this.addScore(n)` from game logic; HUD updates automatically
+3. **New events** — Add to `GameEventMap` in `GameEvents.ts`, emit from `GameScene`, subscribe in `App.tsx`
+4. **HUD** — Add React elements in the `.hud` div in `App.tsx`
+5. **Theme colors** — Edit `src/theme.ts`
+6. **Assets** — Place files in `assets/`, run `stowkit build`, load with `pack.loadMesh('id')`

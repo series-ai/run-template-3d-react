@@ -41,7 +41,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <p className="error-message">
             {this.state.error?.message || 'An unexpected error occurred'}
           </p>
-          <button className="btn-primary btn-large" onClick={this.handleReload}>
+          <button className="error-reload" onClick={this.handleReload}>
             Reload App
           </button>
         </div>
