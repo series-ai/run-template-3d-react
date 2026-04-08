@@ -34,8 +34,7 @@
   },
   "dependencies": {
     "@series-inc/rundot-game-sdk": "^5.9.9",
-    "@series-inc/stowkit-packer-gui": "^0.1.1",
-    "@series-inc/stowkit-three-loader": "^0.1.43",
+"@series-inc/stowkit-three-loader": "^0.1.43",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "~0.170.0"
