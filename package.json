@@ -33,7 +33,7 @@
     "vite": "^6.3.5"
   },
   "dependencies": {
-    "@series-inc/rundot-game-sdk": "^5.9.9",
+    "@series-inc/rundot-game-sdk": "^5.14.0",
     "@series-inc/stowkit-packer-gui": "^0.1.1",
     "@series-inc/stowkit-three-loader": "^0.1.43",
     "react": "^18.3.1",
