@@ -5,11 +5,18 @@ import RundotGameAPI from '@series-inc/rundot-game-sdk/api';
 import { loadStowKitPack, disposeStowKitPack } from './loadStowKitPack';
 import { GameEventEmitter, type GameState } from './GameEvents';
 
+const FUNNEL = 'onboarding';
+const FUNNEL_ORDER = 1;
+const SCORE_TO_WIN = 10;
+
 export class GameScene {
   readonly events = new GameEventEmitter();
 
   private state: GameState = 'loading';
   private score = 0;
+
+  private gameStartedFired = false;
+  private firstScoreFired = false;
 
   private renderer: THREE.WebGLRenderer;
   private scene: THREE.Scene;
@@ -19,6 +26,9 @@ export class GameScene {
   private animationFrameId = 0;
   private resizeObserver: ResizeObserver;
   private envMap: THREE.Texture | null = null;
+
+  private raycaster = new THREE.Raycaster();
+  private pointer = new THREE.Vector2();
 
   // --- Demo asset (replace with your game objects) ---
   private diceContainer: THREE.Group | null = null;
@@ -85,6 +95,8 @@ export class GameScene {
     this.resizeObserver = new ResizeObserver(this.onResize);
     this.resizeObserver.observe(container);
 
+    this.renderer.domElement.addEventListener('pointerdown', this.onPointerDown);
+
     this.start();
     this.loadAssets();
   }
@@ -114,11 +126,12 @@ export class GameScene {
   gameOver(): void {
     if (this.state !== 'playing') return;
     this.setState('gameover');
+    RundotGameAPI.analytics.recordCustomEvent('game_over', { final_score: this.score });
+    RundotGameAPI.analytics.trackFunnelStep(4, 'game_over', FUNNEL, FUNNEL_ORDER);
   }
 
   restart(): void {
-    this.score = 0;
-    this.events.emit('scoreChange', this.score);
+    this.setScore(0);
 
     // Reset demo dice rotation
     if (this.diceContainer) {
@@ -126,21 +139,35 @@ export class GameScene {
     }
 
     this.setState('playing');
+    RundotGameAPI.analytics.recordCustomEvent('game_restarted');
   }
 
   private setState(next: GameState): void {
+    if (this.state === next) return;
     this.state = next;
     this.events.emit('stateChange', next);
+
+    if (next === 'playing' && !this.gameStartedFired) {
+      this.gameStartedFired = true;
+      RundotGameAPI.analytics.recordCustomEvent('game_started');
+      RundotGameAPI.analytics.trackFunnelStep(2, 'game_started', FUNNEL, FUNNEL_ORDER);
+    }
   }
 
   /** Call from game logic to change the score. Emits `scoreChange`. */
   setScore(value: number): void {
     this.score = value;
     this.events.emit('scoreChange', value);
+    RundotGameAPI.analytics.recordCustomEvent('score_change', { value });
   }
 
   /** Shorthand: add to current score. */
   addScore(delta: number): void {
+    if (!this.firstScoreFired) {
+      this.firstScoreFired = true;
+      RundotGameAPI.analytics.recordCustomEvent('first_score');
+      RundotGameAPI.analytics.trackFunnelStep(3, 'first_score', FUNNEL, FUNNEL_ORDER);
+    }
     this.setScore(this.score + delta);
   }
 
@@ -188,6 +215,29 @@ export class GameScene {
   };
 
   // ---------------------------------------------------------------------------
+  // Input
+  // ---------------------------------------------------------------------------
+
+  private onPointerDown = (e: PointerEvent) => {
+    if (this.state !== 'playing' || !this.diceContainer) return;
+
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    this.pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+    this.raycaster.setFromCamera(this.pointer, this.camera);
+    const hits = this.raycaster.intersectObject(this.diceContainer, true);
+    if (hits.length === 0) return;
+
+    this.addScore(1);
+    RundotGameAPI.analytics.recordCustomEvent('dice_tapped', { score: this.score });
+
+    if (this.score >= SCORE_TO_WIN) {
+      this.gameOver();
+    }
+  };
+
+  // ---------------------------------------------------------------------------
   // Asset loading
   // ---------------------------------------------------------------------------
 
@@ -207,9 +257,13 @@ export class GameScene {
       this.diceContainer.add(mesh);
       this.scene.add(this.diceContainer);
 
+      RundotGameAPI.analytics.recordCustomEvent('assets_loaded');
+      RundotGameAPI.analytics.trackFunnelStep(1, 'assets_loaded', FUNNEL, FUNNEL_ORDER);
+
       this.setState('playing');
     } catch (err) {
       RundotGameAPI.error('[GameScene] Error loading assets:', err);
+      RundotGameAPI.analytics.recordCustomEvent('assets_load_failed', { message: String(err) });
     }
   }
 
@@ -254,6 +308,7 @@ export class GameScene {
   dispose() {
     cancelAnimationFrame(this.animationFrameId);
     this.resizeObserver.disconnect();
+    this.renderer.domElement.removeEventListener('pointerdown', this.onPointerDown);
     this.controls.dispose();
     this.envMap?.dispose();
     this.renderer.dispose();
