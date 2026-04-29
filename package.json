@@ -4,8 +4,9 @@
   "description": "Three.js + React UI + Vite + TypeScript template with RundotGameAPI integration",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "_build": "tsc && vite build",
+    "assets": "stowkit build",
+    "dev": "npm run assets && vite",
+    "_build": "npm run assets && tsc && vite build",
     "build": "npm run _build",
     "build:bundled": "cross-env RUNDOT_GAME_DISABLE_EMBEDDED_LIBS=true npm run _build",
     "preview": "vite preview",
@@ -23,6 +24,7 @@
   "author": "",
   "license": "SEE LICENSE IN LICENSE.txt",
   "devDependencies": {
+    "@series-inc/stowkit-cli": "^0.6.42",
     "@types/react": "^18.3.17",
     "@types/react-dom": "^18.3.5",
     "@types/three": "~0.170.0",
