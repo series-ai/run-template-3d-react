@@ -11,5 +11,6 @@ coverage/
 
 # StowKit
 *.stowcache
+public/cdn-assets/*.stow
 !public/cdn-assets/CLAUDE.md
 .rundot/3d-engine-docs
