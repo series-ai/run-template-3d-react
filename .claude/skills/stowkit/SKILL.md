@@ -254,13 +254,21 @@ Children extracted from a GLB container can be any of:
 
 ### GLB child IDs
 
-Child asset IDs follow the pattern `{containerId}/{childName}`. For example, if the container is `models/hero.glb`, its children have IDs like:
-- `models/hero.glb/Hero_Diffuse.png` (texture)
-- `models/hero.glb/Hero` (mesh)
-- `models/hero.glb/HeroSkin.stowmat` (material)
-- `models/hero.glb/Idle` (animation)
+A GLB child has **two different identifiers — do not confuse them.**
 
-Material texture references within a GLB also use these child IDs (e.g. `"textureAsset": "models/hero.glb/Hero_Diffuse.png"`).
+**1. Runtime load id = the child's `stringId`.** This is the ONLY id you pass to the runtime loader (`pack.loadMesh`, `pack.loadTexture`, `pack.loadAnimation`, etc.). It is the exact `stringId` value shown in the container's `children` array — meshes/textures/animations are lowercased, materials keep their name. For the `hero.glb` example above:
+
+```ts
+pack.loadSkinnedMesh('hero')       // mesh child  → stringId "hero"
+pack.loadTexture('hero_diffuse')   // texture child → stringId "hero_diffuse"
+pack.loadAnimation(group, 'idle')  // animation child → stringId "idle"
+```
+
+The runtime id is **NOT** prefixed by the container and is **NOT** necessarily the original-cased filename. Read the real `stringId` from the `children` array — never reconstruct it from the source filename.
+
+**2. Internal reference id = `{containerId}/{childName}`** (e.g. `models/hero.glb/Hero`, `models/hero.glb/Hero_Diffuse.png`). This form exists ONLY inside `.stowmeta` to cross-reference one child from another — `materialOverrides` and material `textureAsset` references (e.g. `"textureAsset": "models/hero.glb/Hero_Diffuse.png"`). **Never pass this path to `pack.loadMesh()` / `loadTexture()` / etc. — it does not resolve at runtime and produces `[StowKit Error] Asset not found`.**
+
+To discover the exact runtime `stringId`s in a built pack, read the `stringId` fields in the container's `.stowmeta` `children` array, run `stowkit inspect <pack>.stow`, or call `pack.listAssets()` at runtime. Always use the real id — never guess.
 
 ### GLB auto-assignment
 
