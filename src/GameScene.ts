@@ -85,13 +85,17 @@ export class GameScene {
     this.scene.add(dirLight);
     this.scene.add(dirLight.target);
 
+    // ShadowMaterial is invisible without shadow maps, so on degraded
+    // (software-GPU) contexts use a plain neutral material instead.
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(10, 10),
-      new THREE.ShadowMaterial({ opacity: 0.3 }),
+      degraded
+        ? new THREE.MeshLambertMaterial({ color: 0x8f8f8f })
+        : new THREE.ShadowMaterial({ opacity: 0.3 }),
     );
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -1;
-    ground.receiveShadow = true;
+    ground.receiveShadow = !degraded;
     this.scene.add(ground);
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
