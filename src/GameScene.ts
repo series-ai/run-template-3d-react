@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import RundotGameAPI from '@series-inc/rundot-game-sdk/api';
+import { createWebGLRenderer } from './createWebGLRenderer';
 import { loadStowKitPack, disposeStowKitPack } from './loadStowKitPack';
 import { GameEventEmitter, type GameState } from './GameEvents';
 
@@ -36,11 +37,10 @@ export class GameScene {
   constructor(container: HTMLDivElement) {
     const { clientWidth: w, clientHeight: h } = container;
 
-    this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      powerPreference: 'high-performance',
-      failIfMajorPerformanceCaveat: true,
-    });
+    // Throws WebGLUnavailableError if WebGL is unavailable — App catches it
+    // and shows a friendly fallback screen.
+    const { renderer, degraded } = createWebGLRenderer();
+    this.renderer = renderer;
 
     const dpr = Math.min(window.devicePixelRatio, 2);
     this.renderer.setSize(w * dpr, h * dpr, false);
@@ -50,8 +50,11 @@ export class GameScene {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 0.5;
 
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // Skip shadows on software GPUs — they're too slow without hardware acceleration.
+    if (!degraded) {
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    }
 
     container.appendChild(this.renderer.domElement);
 
@@ -67,16 +70,18 @@ export class GameScene {
 
     const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
     dirLight.position.copy(sunPosition);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.set(1024, 1024);
-    dirLight.shadow.camera.near = 0.5;
-    dirLight.shadow.camera.far = 20;
-    dirLight.shadow.camera.left = -5;
-    dirLight.shadow.camera.right = 5;
-    dirLight.shadow.camera.top = 5;
-    dirLight.shadow.camera.bottom = -5;
-    dirLight.shadow.bias = -0.0005;
-    dirLight.shadow.normalBias = 0.02;
+    if (!degraded) {
+      dirLight.castShadow = true;
+      dirLight.shadow.mapSize.set(1024, 1024);
+      dirLight.shadow.camera.near = 0.5;
+      dirLight.shadow.camera.far = 20;
+      dirLight.shadow.camera.left = -5;
+      dirLight.shadow.camera.right = 5;
+      dirLight.shadow.camera.top = 5;
+      dirLight.shadow.camera.bottom = -5;
+      dirLight.shadow.bias = -0.0005;
+      dirLight.shadow.normalBias = 0.02;
+    }
     this.scene.add(dirLight);
     this.scene.add(dirLight.target);
 
