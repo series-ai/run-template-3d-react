@@ -53,18 +53,15 @@ function isSoftwareRenderer(renderer: THREE.WebGLRenderer): boolean {
  * (i.e. WebGL is genuinely unavailable).
  */
 export function createWebGLRenderer(): CreateWebGLRendererResult {
+  const attempt = (antialias: boolean): THREE.WebGLRenderer =>
+    new THREE.WebGLRenderer({ antialias, powerPreference: 'high-performance' });
+
   let renderer: THREE.WebGLRenderer;
   try {
-    renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      powerPreference: 'high-performance',
-    });
+    renderer = attempt(true);
   } catch {
     try {
-      renderer = new THREE.WebGLRenderer({
-        antialias: false,
-        powerPreference: 'high-performance',
-      });
+      renderer = attempt(false);
     } catch (err) {
       throw new WebGLUnavailableError(err);
     }
