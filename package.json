@@ -30,7 +30,7 @@
     "cross-env": "^7.0.3",
     "firebase": "^12.12.1",
     "prettier": "^3.4.2",
-    "typescript": "^5.7.3",
+    "typescript": "^7.0.2",
     "vite": "^6.3.5"
   },
   "dependencies": {
