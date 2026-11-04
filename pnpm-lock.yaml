@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@series-inc/rundot-game-sdk':
-        specifier: 5.28.1
-        version: 5.28.1
+        specifier: 5.34.0
+        version: 5.34.0
       '@series-inc/stowkit-packer-gui':
         specifier: ^0.1.1
         version: 0.1.9(@types/react-dom@18.3.7(@types/react@18.3.28))(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(vite@6.4.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.31.1))
@@ -1397,8 +1397,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@series-inc/rundot-game-sdk@5.28.1':
-    resolution: {integrity: sha512-FW5ZaWlgz7XdlZWgojwMjSkMmW/hm16+aBG932R8zXk3+13TPaIdpmxGzE1tmg+WGjMhH98/4KkPG5QomZ5sRw==}
+  '@series-inc/rundot-game-sdk@5.34.0':
+    resolution: {integrity: sha512-srBKSiv+rgjzAFy83jnvO1XzxYJnbeVIInmgjH3S+VBVC+bv3PyWhSUhIlQfss6qcAocKEyTZoDIumaGmZR+fw==}
     hasBin: true
 
   '@series-inc/stowkit-packer-gui@0.1.9':
@@ -3723,7 +3723,7 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.59.0':
     optional: true
 
-  '@series-inc/rundot-game-sdk@5.28.1':
+  '@series-inc/rundot-game-sdk@5.34.0':
     dependencies:
       '@types/ws': 8.18.2
       glin-profanity: 2.3.8
